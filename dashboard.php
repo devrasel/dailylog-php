@@ -74,22 +74,22 @@ if (!isset($_SESSION['user_id'])) {
                 <select id="vehicleSelect" class="flex-1 block pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                     <option value="">Select a vehicle...</option>
                 </select>
-                <div class="flex gap-2">
-                    <button id="editVehicleBtn" class="hidden px-3 py-2 bg-yellow-600 text-white rounded-md text-sm font-medium hover:bg-yellow-700 transition-colors" title="Edit Vehicle">
+                <div class="flex gap-1 sm:gap-2">
+                    <button id="editVehicleBtn" class="hidden px-2 sm:px-3 py-2 bg-yellow-600 text-white rounded-md text-sm font-medium hover:bg-yellow-700 transition-colors" title="Edit Vehicle">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <button id="deleteVehicleBtn" class="hidden px-3 py-2 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700 transition-colors" title="Delete Vehicle">
+                    <button id="deleteVehicleBtn" class="hidden px-2 sm:px-3 py-2 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700 transition-colors" title="Delete Vehicle">
                         <i class="fas fa-trash"></i>
                     </button>
-                    <button id="addVehicleBtn" class="px-3 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors">
-                        <i class="fas fa-plus"></i> Add Vehicle
+                    <button id="addVehicleBtn" class="px-2 sm:px-3 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-plus"></i> <span class="hidden sm:inline">Add Vehicle</span>
                     </button>
                 </div>
             </div>
         </div>
 
         <!-- Tabs -->
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
+        <div class="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-t-lg shadow-sm sticky top-0 z-20 transition-shadow duration-300" id="tabsContainer">
             <div class="flex border-b border-gray-200 dark:border-gray-700">
                 <button class="tab-btn active flex-1 py-3 sm:py-4 px-1 text-center text-xs sm:text-sm font-medium text-gray-500 hover:text-gray-700 focus:outline-none dark:text-gray-400 dark:hover:text-gray-300 transition-colors duration-200" data-tab="history">
                     <div class="flex flex-col items-center gap-1">
@@ -122,8 +122,11 @@ if (!isset($_SESSION['user_id'])) {
                     </div>
                 </button>
             </div>
+        </div>
 
-            <div class="p-4">
+        <!-- Tab Content -->
+        <div class="bg-white dark:bg-gray-800 rounded-b-lg shadow-sm overflow-hidden">
+            <div class="p-2">
                 <!-- Fuel History Tab -->
                 <div id="history" class="tab-content active space-y-4">
                     <div id="fuelLoading" class="text-center py-4 hidden">Loading...</div>
@@ -223,18 +226,18 @@ if (!isset($_SESSION['user_id'])) {
                     </div>
 
                     <!-- Monthly Summary -->
-                    <div class="grid grid-cols-3 gap-3">
-                        <div class="bg-gradient-to-br from-blue-500 to-blue-600 p-4 rounded-lg text-white">
-                            <div class="text-xs opacity-90">Total</div>
-                            <div id="totalExpense" class="text-xl font-bold">৳0</div>
+                    <div class="grid grid-cols-3 gap-2 sm:gap-3">
+                        <div class="bg-gradient-to-br from-blue-500 to-blue-600 p-2 sm:p-4 rounded-lg text-white">
+                            <div class="text-[10px] sm:text-xs opacity-90">Total</div>
+                            <div id="totalExpense" class="text-sm sm:text-xl font-bold">৳0</div>
                         </div>
-                        <div class="bg-gradient-to-br from-green-500 to-green-600 p-4 rounded-lg text-white">
-                            <div class="text-xs opacity-90">Entries</div>
-                            <div id="totalEntries" class="text-xl font-bold">0</div>
+                        <div class="bg-gradient-to-br from-green-500 to-green-600 p-2 sm:p-4 rounded-lg text-white">
+                            <div class="text-[10px] sm:text-xs opacity-90">Entries</div>
+                            <div id="totalEntries" class="text-sm sm:text-xl font-bold">0</div>
                         </div>
-                        <div class="bg-gradient-to-br from-purple-500 to-purple-600 p-4 rounded-lg text-white">
-                            <div class="text-xs opacity-90">Categories</div>
-                            <div id="totalCategories" class="text-xl font-bold">0</div>
+                        <div class="bg-gradient-to-br from-purple-500 to-purple-600 p-2 sm:p-4 rounded-lg text-white">
+                            <div class="text-[10px] sm:text-xs opacity-90">Top Category</div>
+                            <div id="totalCategories" class="text-xs sm:text-lg font-bold truncate">N/A</div>
                         </div>
                     </div>
 
@@ -298,7 +301,7 @@ if (!isset($_SESSION['user_id'])) {
                             </label>
                             <input type="file" id="documentUpload" accept=".pdf,.jpg,.jpeg,.png" class="hidden">
                         </div>
-                        <div id="documentsList" class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        <div id="documentsList" class="grid grid-cols-4 md:grid-cols-10 gap-3">
                             <!-- Documents will be injected here -->
                         </div>
                         <div id="noDocuments" class="text-center py-8 text-gray-500 hidden">
@@ -581,7 +584,7 @@ if (!isset($_SESSION['user_id'])) {
     <!-- Add Fuel Modal -->
     <div id="fuelModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 hidden flex items-center justify-center z-50">
         <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 class="text-lg font-medium mb-4 dark:text-white">Add Fuel Entry</h3>
+            <h3 id="fuelModalTitle" class="text-lg font-medium mb-4 dark:text-white">Add Fuel Entry</h3>
             <form id="fuelForm" class="space-y-4">
                 <input type="hidden" name="id" id="fuelId">
                 <div>

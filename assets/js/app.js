@@ -303,6 +303,10 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('fuelForm').reset();
             // Set default date
             document.getElementById('fuelDate').value = new Date().toISOString().slice(0, 16);
+            // Reset button text and title
+            document.getElementById('fuelModalTitle').textContent = 'Add Fuel Entry';
+            const btn = fuelForm.querySelector('button[type="submit"]');
+            btn.innerHTML = '<i class="fas fa-plus mr-1"></i> Add';
             fuelModal.classList.remove('hidden');
         });
 
@@ -409,6 +413,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Document upload
         document.getElementById('documentUpload').addEventListener('change', handleDocumentUpload);
+
+        // Sticky tabs with smooth shadow on scroll
+        const tabsContainer = document.getElementById('tabsContainer');
+        let lastScrollY = window.scrollY;
+
+        window.addEventListener('scroll', () => {
+            const currentScrollY = window.scrollY;
+
+            if (currentScrollY > 100) {
+                tabsContainer.classList.add('shadow-lg');
+            } else {
+                tabsContainer.classList.remove('shadow-lg');
+            }
+
+            lastScrollY = currentScrollY;
+        });
     }
 
     // API Calls
@@ -830,21 +850,37 @@ document.addEventListener('DOMContentLoaded', () => {
             const isPartial = entry.fuelType === 'PARTIAL';
 
             // Calculate stats only for FULL entries
+            let totalFuelUsed = 0;
+            let totalCostUsed = 0;
+
+            // Calculate stats only for FULL entries
             if (!isPartial) {
                 // Find previous FULL entry
                 let prevFullEntry = null;
+                let intermediateLiters = 0;
+
                 for (let i = index + 1; i < fuelEntries.length; i++) {
                     if (fuelEntries[i].fuelType !== 'PARTIAL') {
                         prevFullEntry = fuelEntries[i];
                         break;
                     }
                     // Add partial fuel to accumulated liters
-                    accumulatedLiters += parseFloat(fuelEntries[i].liters);
+                    intermediateLiters += parseFloat(fuelEntries[i].liters);
                 }
 
                 if (prevFullEntry) {
                     distance = parseFloat(entry.odometer) - parseFloat(prevFullEntry.odometer);
-                    mileage = distance / accumulatedLiters;
+                    // Mileage = Distance / (Previous Full Liters + Intermediate Partials)
+                    totalFuelUsed = parseFloat(prevFullEntry.liters) + intermediateLiters;
+                    // Calculate total cost used (Previous Full Cost + Intermediate Partials Cost)
+                    let intermediateCost = 0;
+                    for (let i = index + 1; i < fuelEntries.length; i++) {
+                        if (fuelEntries[i].fuelType !== 'PARTIAL') break;
+                        intermediateCost += parseFloat(fuelEntries[i].totalCost);
+                    }
+                    totalCostUsed = parseFloat(prevFullEntry.totalCost) + intermediateCost;
+
+                    mileage = distance / totalFuelUsed;
                     showStats = true;
 
                     if (mileage > 45) {
@@ -915,21 +951,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 <!-- Efficiency Section -->
                 ${showStats ? `
                 <div class="${efficiencyClass.replace('text-', 'border-').split(' ')[2]} ${efficiencyClass.split(' ')[1]} p-3 mx-4 mb-4 rounded-lg border">
-                    <div class="flex justify-between items-center mb-1">
-                        <div class="flex items-center gap-2 ${efficiencyClass.split(' ')[0]}">
-                            <i class="fas fa-route"></i>
-                            <span class="text-sm hidden sm:inline">Distance Covered</span>
-                            <span class="text-sm sm:hidden">Dist.</span>
-                            <span class="font-bold">${distance.toFixed(1)} km</span>
+                    <div class="flex justify-between items-center mb-2">
+                        <div class="flex items-center gap-1 sm:gap-2 ${efficiencyClass.split(' ')[0]}">
+                            <i class="fas fa-route text-xs sm:text-sm"></i>
+                            <span class="text-xs sm:text-sm hidden sm:inline">Distance</span>
+                            <span class="text-xs sm:text-sm sm:hidden">Dist.</span>
+                            <span class="font-bold text-xs sm:text-sm">${distance.toFixed(1)} km</span>
                         </div>
-                        <div class="flex items-center gap-2 ${efficiencyClass.split(' ')[0]}">
-                            <i class="fas fa-tachometer-alt"></i>
-                            <span class="text-sm hidden sm:inline">Mileage</span>
-                            <span class="text-sm sm:hidden">Avg.</span>
-                            <span class="font-bold">${mileage.toFixed(2)} km/L</span>
+                        <div class="flex items-center gap-1 sm:gap-2 ${efficiencyClass.split(' ')[0]}">
+                            <i class="fas fa-tachometer-alt text-xs sm:text-sm"></i>
+                            <span class="text-xs sm:text-sm hidden sm:inline">Mileage</span>
+                            <span class="text-xs sm:text-sm sm:hidden">Avg.</span>
+                            <span class="font-bold text-xs sm:text-sm">${mileage.toFixed(2)} km/L</span>
                         </div>
                     </div>
-                    <div class="text-center text-xs ${efficiencyClass.split(' ')[0]} border-t ${efficiencyClass.split(' ')[2]} pt-1 mt-1">
+                    <div class="flex justify-between items-center mb-1 text-[10px] sm:text-xs ${efficiencyClass.split(' ')[0]} opacity-90">
+                         <div class="flex items-center gap-1">
+                            <i class="fas fa-gas-pump text-[10px]"></i>
+                            <span>Trip Fuel: ${totalFuelUsed.toFixed(2)} L</span>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <i class="fas fa-coins text-[10px]"></i>
+                            <span>Trip Cost: ${settings.currency || 'BDT'} ${totalCostUsed.toFixed(2)}</span>
+                        </div>
+                    </div>
+                    <div class="text-center text-[10px] sm:text-xs ${efficiencyClass.split(' ')[0]} border-t ${efficiencyClass.split(' ')[2]} pt-1 mt-1">
                         ${efficiencyText}
                     </div>
                 </div>
@@ -951,24 +997,25 @@ document.addEventListener('DOMContentLoaded', () => {
             const el = document.createElement('div');
             el.className = 'bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 flex justify-between items-center';
             el.innerHTML = `
-                <div>
+            <div>
                     <div class="font-medium dark:text-white">${entry.description}</div>
-                    <div class="text-sm text-gray-500 dark:text-gray-400">${moment(entry.date).format('MMM D, YYYY')}</div>
+                    ${entry.notes ? `<div class="text-xs text-gray-600 dark:text-gray-300 mt-0.5">${entry.notes}</div>` : ''}
+                    <div class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">${moment(entry.date).format('MMM D, YYYY')}</div>
                     <div class="text-xs text-gray-400">${entry.category || 'General'}</div>
                 </div>
-                <div class="flex items-center gap-3">
-                    <div class="text-right">
-                        <div class="font-bold text-orange-600">${settings.currency || '৳'}${entry.cost}</div>
-                    </div>
-                    <div class="flex gap-1">
-                        <button onclick="editMaintenanceEntry('${entry.id}')" class="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900 rounded" title="Edit">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button onclick="deleteMaintenanceEntry('${entry.id}')" class="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900 rounded" title="Delete">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
+            <div class="flex items-center gap-3">
+                <div class="text-right">
+                    <div class="font-bold text-orange-600">${settings.currency || '৳'}${entry.cost}</div>
                 </div>
+                <div class="flex gap-1">
+                    <button onclick="editMaintenanceEntry('${entry.id}')" class="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900 rounded" title="Edit">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button onclick="deleteMaintenanceEntry('${entry.id}')" class="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900 rounded" title="Delete">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
             `;
             maintenanceList.appendChild(el);
         });
@@ -1157,10 +1204,14 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('analyticsTotalCost').textContent = `${currency} ${totalCost.toFixed(2)}`;
 
             document.getElementById('analyticsTotalFuel').textContent = `${currency} ${totalFuelCost.toFixed(2)}`;
-            document.getElementById('analyticsFuelDetails').textContent = `${totalLiters.toFixed(1)} ${settings.volumeUnit} • ${totalDistance.toFixed(1)} ${settings.distanceUnit}`;
+            // Calculate average cost per liter
+            const avgCostPerLiter = totalLiters > 0 ? totalFuelCost / totalLiters : 0;
+            document.getElementById('analyticsFuelDetails').textContent = `${totalLiters.toFixed(1)} ${settings.volumeUnit} • ${currency}${avgCostPerLiter.toFixed(2)}/${settings.volumeUnit}`;
+
+            document.getElementById('analyticsTotalDistance').textContent = `${totalDistance.toFixed(1)} ${settings.distanceUnit}`;
 
             document.getElementById('analyticsAvgMileage').textContent = `${avgMileage.toFixed(2)} ${settings.distanceUnit}/${settings.volumeUnit}`;
-            document.getElementById('analyticsCostPerKm').textContent = `${currency} ${costPerKm.toFixed(2)}/${settings.distanceUnit}`;
+            document.getElementById('analyticsCostPerKm').textContent = `${currency} ${costPerKm.toFixed(2)} / ${settings.distanceUnit}`;
 
             document.getElementById('analyticsMonthlyFuelCost').textContent = `${currency} ${monthlyFuelCost.toFixed(2)}`;
 
@@ -1288,7 +1339,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const currency = settings.currency || '৳';
             document.getElementById('totalExpense').textContent = `${currency} ${stats.totalAmount.toFixed(2)}`;
             document.getElementById('totalEntries').textContent = stats.totalEntries;
-            document.getElementById('totalCategories').textContent = Object.keys(stats.topCategories).length;
+
+            // Show top category name instead of count
+            const topCategoryNames = Object.keys(stats.topCategories);
+            const topCategoryText = topCategoryNames.length > 0 ? topCategoryNames[0] : 'N/A';
+            document.getElementById('totalCategories').textContent = topCategoryText;
 
             // Top Categories Chart
             renderExpenseChart(stats.topCategories);
@@ -1352,12 +1407,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 const card = document.createElement('div');
                 card.className = 'bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 flex items-center gap-3';
                 card.innerHTML = `
-                    <div class="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center" style="background-color: ${cat.color || '#6b7280'}20">
-                        <i class="fas ${cat.icon || 'fa-circle'}" style="color: ${cat.color || '#6b7280'}"></i>
+        <div class="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center" style="background-color: ${cat.color || '#6b7280'}20">
+        <i class="fas ${cat.icon || 'fa-circle'}" style="color: ${cat.color || '#6b7280'}"></i>
                     </div>
                     <div class="flex-1 min-w-0">
                         <div class="font-medium dark:text-white truncate">${exp.title}</div>
-                        <div class="text-xs text-gray-500 dark:text-gray-400">${exp.category} • ${exp.paymentMethod}</div>
+                        ${exp.description ? `<div class="text-xs text-gray-600 dark:text-gray-300 mt-0.5">${exp.description}</div>` : ''}
+                        <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">${exp.category} • ${exp.paymentMethod}</div>
                     </div>
                     <div class="text-right">
                         <div class="font-bold text-blue-600">${settings.currency || '৳'} ${parseFloat(exp.amount).toFixed(2)}</div>
@@ -1464,8 +1520,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const isImage = doc.filetype.startsWith('image/');
 
             card.innerHTML = `
-                <div class="aspect-square bg-gray-100 dark:bg-gray-700 rounded-md mb-2 flex items-center justify-center overflow-hidden">
-                    ${isImage ? `<img src="${doc.url}" alt="${doc.filename}" class="w-full h-full object-cover">` :
+        <div class="aspect-square bg-gray-100 dark:bg-gray-700 rounded-md mb-2 flex items-center justify-center overflow-hidden">
+        ${isImage ? `<img src="${doc.url}" alt="${doc.filename}" class="w-full h-full object-cover">` :
                     `<i class="fas fa-file-pdf text-4xl text-red-500"></i>`}
                 </div>
                 <div class="text-xs font-medium dark:text-white truncate">${doc.filename}</div>
@@ -1478,7 +1534,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
-            `;
+    `;
             list.appendChild(card);
         });
     }
@@ -1520,6 +1576,12 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('fuelTotalCost').value = entry.totalCost;
         document.getElementById('fuelPartial').checked = entry.fuelType === 'PARTIAL';
         document.getElementById('fuelNotes').value = entry.notes || '';
+
+        // Update button text and title
+        document.getElementById('fuelModalTitle').textContent = 'Edit Fuel Entry';
+        const btn = document.getElementById('fuelForm').querySelector('button[type="submit"]');
+        btn.innerHTML = '<i class="fas fa-save mr-1"></i> Update';
+
         fuelModal.classList.remove('hidden');
     };
 
