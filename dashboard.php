@@ -779,6 +779,32 @@ if (!isset($_SESSION['user_id'])) {
         </div>
     </div>
 
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed top-4 right-4 z-[60] flex flex-col gap-2"></div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirmModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 hidden flex items-center justify-center z-[70]">
+        <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+            <div class="flex items-start gap-4">
+                <div id="confirmIcon" class="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center">
+                    <i class="fas fa-exclamation-triangle text-2xl"></i>
+                </div>
+                <div class="flex-1">
+                    <h3 id="confirmTitle" class="text-lg font-semibold text-gray-900 dark:text-white mb-2"></h3>
+                    <p id="confirmMessage" class="text-sm text-gray-600 dark:text-gray-300"></p>
+                </div>
+            </div>
+            <div class="flex justify-end gap-3 mt-6">
+                <button id="confirmCancel" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 transition-colors">
+                    Cancel
+                </button>
+                <button id="confirmOk" class="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors">
+                    Confirm
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script src="assets/js/app.js"></script>
 
 </body>

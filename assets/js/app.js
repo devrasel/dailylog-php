@@ -1,3 +1,88 @@
+// ==================== Notification System ====================
+
+/**
+ * Show a toast notification
+ * @param {string} message - The message to display
+ * @param {string} type - Type of notification: 'success', 'error', 'warning', 'info'
+ */
+function showToast(message, type = 'info') {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+
+    // Icon and color based on type
+    const config = {
+        success: { icon: 'fa-check-circle', bg: 'bg-green-500', text: 'text-white' },
+        error: { icon: 'fa-times-circle', bg: 'bg-red-500', text: 'text-white' },
+        warning: { icon: 'fa-exclamation-triangle', bg: 'bg-yellow-500', text: 'text-white' },
+        info: { icon: 'fa-info-circle', bg: 'bg-blue-500', text: 'text-white' }
+    };
+
+    const { icon, bg, text } = config[type] || config.info;
+
+    toast.className = `${bg} ${text} px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 min-w-[300px] max-w-md transform transition-all duration-300 translate-x-full opacity-0`;
+    toast.innerHTML = `
+        <i class="fas ${icon} text-xl"></i>
+        <span class="flex-1 text-sm font-medium">${message}</span>
+        <button class="ml-2 hover:opacity-75 transition-opacity" onclick="this.parentElement.remove()">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+
+    container.appendChild(toast);
+
+    // Trigger animation
+    setTimeout(() => {
+        toast.classList.remove('translate-x-full', 'opacity-0');
+    }, 10);
+
+    // Auto-dismiss after 4 seconds
+    setTimeout(() => {
+        toast.classList.add('translate-x-full', 'opacity-0');
+        setTimeout(() => toast.remove(), 300);
+    }, 4000);
+}
+
+/**
+ * Show a confirmation dialog
+ * @param {string} title - Dialog title
+ * @param {string} message - Dialog message
+ * @returns {Promise<boolean>} - Resolves to true if confirmed, false if cancelled
+ */
+function showConfirm(title, message) {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('confirmModal');
+        const titleEl = document.getElementById('confirmTitle');
+        const messageEl = document.getElementById('confirmMessage');
+        const okBtn = document.getElementById('confirmOk');
+        const cancelBtn = document.getElementById('confirmCancel');
+
+        titleEl.textContent = title;
+        messageEl.textContent = message;
+        modal.classList.remove('hidden');
+
+        function cleanup() {
+            modal.classList.add('hidden');
+            okBtn.removeEventListener('click', handleOk);
+            cancelBtn.removeEventListener('click', handleCancel);
+        }
+
+        function handleOk() {
+            cleanup();
+            resolve(true);
+        }
+
+        function handleCancel() {
+            cleanup();
+            resolve(false);
+        }
+
+        okBtn.addEventListener('click', handleOk);
+        cancelBtn.addEventListener('click', handleCancel);
+    });
+}
+
+// ==================== Main Application ====================
+
 document.addEventListener('DOMContentLoaded', () => {
     // State
     let currentVehicleId = null;
@@ -213,7 +298,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         document.getElementById('addFuelBtn').addEventListener('click', () => {
-            if (!currentVehicleId) return alert('Please select a vehicle first');
+            if (!currentVehicleId) return showToast('Please select a vehicle first', 'warning');
             document.getElementById('fuelId').value = '';
             document.getElementById('fuelForm').reset();
             // Set default date
@@ -253,7 +338,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Maintenance button
         document.getElementById('addMaintenanceBtn').addEventListener('click', () => {
-            if (!currentVehicleId) return alert('Please select a vehicle first');
+            if (!currentVehicleId) return showToast('Please select a vehicle first', 'warning');
             document.getElementById('maintenanceId').value = '';
             maintenanceForm.reset();
             document.getElementById('maintenanceDate').value = new Date().toISOString().slice(0, 16);
@@ -399,9 +484,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // as per the instruction's implied placement.
 
     async function deleteVehicle(id) {
-        if (!confirm('Are you sure you want to delete this vehicle? All associated data (fuel logs, expenses, maintenance) will also be deleted.')) {
-            return;
-        }
+        const confirmed = await showConfirm(
+            'Delete Vehicle',
+            'Are you sure you want to delete this vehicle? All associated data (fuel logs, expenses, maintenance) will also be deleted.'
+        );
+        if (!confirmed) return;
 
         try {
             const res = await fetch(`api/vehicles/index.php?id=${id}`, {
@@ -409,7 +496,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             if (res.ok) {
-                alert('Vehicle deleted successfully');
+                showToast('Vehicle deleted successfully', 'success');
                 currentVehicleId = null;
                 await fetchVehicles();
                 // Clear all data displays
@@ -418,11 +505,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('maintenanceList').innerHTML = '';
             } else {
                 const data = await res.json();
-                alert(data.error || 'Failed to delete vehicle');
+                showToast(data.error || 'Failed to delete vehicle', 'error');
             }
         } catch (e) {
             console.error('Error deleting vehicle', e);
-            alert('An error occurred. Please try again.');
+            showToast('An error occurred. Please try again.', 'error');
         }
     }
 
@@ -504,8 +591,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 fuelModal.classList.add('hidden');
                 fetchFuelData();
                 loadBikeAnalytics(); // Reload analytics after fuel entry
+                showToast('Fuel entry saved successfully', 'success');
             } else {
-                alert('Failed to save fuel entry');
+                showToast('Failed to save fuel entry', 'error');
             }
         } catch (e) {
             console.error(e);
@@ -529,12 +617,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (res.ok) {
                 vehicleModal.classList.add('hidden');
                 fetchVehicles();
+                showToast('Vehicle saved successfully', 'success');
                 // If current vehicle was updated, re-render details
                 if (data.id && data.id === currentVehicleId) {
                     renderVehicleDetails();
                 }
             } else {
-                alert('Failed to save vehicle');
+                showToast('Failed to save vehicle', 'error');
             }
         } catch (e) {
             console.error(e);
@@ -575,9 +664,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 fetchExpenses();
 
-                alert('Settings saved');
+                showToast('Settings saved successfully', 'success');
             } else {
-                alert(result.error);
+                showToast(result.error, 'error');
             }
         } catch (e) {
             console.error('Error saving settings', e);
@@ -600,8 +689,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 maintenanceModal.classList.add('hidden');
                 fetchMaintenanceData();
                 loadBikeAnalytics();
+                showToast('Maintenance entry saved successfully', 'success');
             } else {
-                alert('Failed to save maintenance cost');
+                showToast('Failed to save maintenance cost', 'error');
             }
         } catch (e) {
             console.error(e);
@@ -632,13 +722,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Validate passwords match
         if (data.newPassword !== data.confirmPassword) {
-            alert('New passwords do not match');
+            showToast('New passwords do not match', 'error');
             return;
         }
 
         // Validate password length
         if (data.newPassword.length < 6) {
-            alert('New password must be at least 6 characters long');
+            showToast('New password must be at least 6 characters long', 'error');
             return;
         }
 
@@ -656,15 +746,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const result = await res.json();
 
             if (res.ok) {
-                alert('Password changed successfully!');
+                showToast('Password changed successfully!', 'success');
                 // Clear form
                 e.target.reset();
             } else {
-                alert(result.error || 'Failed to change password');
+                showToast(result.error || 'Failed to change password', 'error');
             }
         } catch (e) {
             console.error('Error changing password', e);
-            alert('An error occurred. Please try again.');
+            showToast('An error occurred. Please try again.', 'error');
         }
     }
 
@@ -704,17 +794,17 @@ document.addEventListener('DOMContentLoaded', () => {
             const result = await res.json();
 
             if (res.ok) {
-                alert('Security question updated successfully!');
+                showToast('Security question updated successfully!', 'success');
                 // Clear form and refresh
                 e.target.reset();
                 fetchCurrentSecurityQuestion();
                 fetchSecurityQuestion(); // Update the password change form too
             } else {
-                alert(result.error || 'Failed to update security question');
+                showToast(result.error || 'Failed to update security question', 'error');
             }
         } catch (e) {
             console.error('Error updating security question', e);
-            alert('An error occurred. Please try again.');
+            showToast('An error occurred. Please try again.', 'error');
         }
     }
 
@@ -1304,8 +1394,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (res.ok) {
                 expenseModal.classList.add('hidden');
                 fetchExpenses();
+                showToast('Expense saved successfully', 'success');
             } else {
-                alert('Failed to save expense');
+                showToast('Failed to save expense', 'error');
             }
         } catch (e) {
             console.error(e);
@@ -1325,7 +1416,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function handleDocumentUpload(e) {
-        if (!currentVehicleId) return alert('Please select a vehicle first');
+        if (!currentVehicleId) return showToast('Please select a vehicle first', 'error');
         const file = e.target.files[0];
         if (!file) return;
 
@@ -1344,11 +1435,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 fetchDocuments();
             } else {
                 const data = await res.json();
-                alert(data.error || 'Failed to upload document');
+                showToast(data.error || 'Failed to upload document', 'error');
             }
         } catch (e) {
             console.error(e);
-            alert('Failed to upload document');
+            showToast('Failed to upload document', 'error');
         }
     }
 
@@ -1393,7 +1484,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     window.deleteDocument = async function (id) {
-        if (!confirm('Are you sure you want to delete this document?')) return;
+        const confirmed = await showConfirm('Delete Document', 'Are you sure you want to delete this document?');
+        if (!confirmed) return;
 
         try {
             const res = await fetch('api/vehicles/documents.php', {
@@ -1404,12 +1496,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (res.ok) {
                 fetchDocuments();
+                showToast('Document deleted successfully', 'success');
             } else {
-                alert('Failed to delete document');
+                showToast('Failed to delete document', 'error');
             }
         } catch (e) {
             console.error(e);
-            alert('Failed to delete document');
+            showToast('Failed to delete document', 'error');
         }
     };
 
@@ -1431,7 +1524,8 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     window.deleteFuelEntry = async function (id) {
-        if (!confirm('Are you sure you want to delete this fuel entry?')) return;
+        const confirmed = await showConfirm('Delete Fuel Entry', 'Are you sure you want to delete this fuel entry?');
+        if (!confirmed) return;
 
         try {
             const res = await fetch(`api/fuel/index.php?id=${id}`, { method: 'DELETE' });
@@ -1439,12 +1533,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 fetchFuelData();
                 loadAnalytics();
                 loadBikeAnalytics();
+                showToast('Fuel entry deleted successfully', 'success');
             } else {
-                alert('Failed to delete fuel entry');
+                showToast('Failed to delete fuel entry', 'error');
             }
         } catch (e) {
             console.error(e);
-            alert('Failed to delete fuel entry');
+            showToast('Failed to delete fuel entry', 'error');
         }
     };
 
@@ -1463,19 +1558,21 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     window.deleteMaintenanceEntry = async function (id) {
-        if (!confirm('Are you sure you want to delete this maintenance entry?')) return;
+        const confirmed = await showConfirm('Delete Maintenance Entry', 'Are you sure you want to delete this maintenance entry?');
+        if (!confirmed) return;
 
         try {
             const res = await fetch(`api/maintenance-cost/index.php?id=${id}`, { method: 'DELETE' });
             if (res.ok) {
                 fetchMaintenanceData();
                 loadBikeAnalytics();
+                showToast('Maintenance entry deleted successfully', 'success');
             } else {
-                alert('Failed to delete maintenance entry');
+                showToast('Failed to delete maintenance entry', 'error');
             }
         } catch (e) {
             console.error(e);
-            alert('Failed to delete maintenance entry');
+            showToast('Failed to delete maintenance entry', 'error');
         }
     };
 
@@ -1494,18 +1591,20 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     window.deleteExpense = async function (id) {
-        if (!confirm('Are you sure you want to delete this expense?')) return;
+        const confirmed = await showConfirm('Delete Expense', 'Are you sure you want to delete this expense?');
+        if (!confirmed) return;
 
         try {
             const res = await fetch(`api/expenses/index.php?id=${id}`, { method: 'DELETE' });
             if (res.ok) {
                 fetchExpenses();
+                showToast('Expense deleted successfully', 'success');
             } else {
-                alert('Failed to delete expense');
+                showToast('Failed to delete expense', 'error');
             }
         } catch (e) {
             console.error(e);
-            alert('Failed to delete expense');
+            showToast('Failed to delete expense', 'error');
         }
     };
 
