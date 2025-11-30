@@ -2,7 +2,7 @@
 $host = '127.0.0.1';
 $db   = 'dailylogdb';
 $user = 'root';
-$pass = 'root';
+$pass = '001Rasel2@';
 $charset = 'utf8mb4';
 
 // Set timezone to Bangladesh (Asia/Dhaka - UTC+6)

@@ -414,6 +414,113 @@ document.addEventListener('DOMContentLoaded', () => {
         // Document upload
         document.getElementById('documentUpload').addEventListener('change', handleDocumentUpload);
 
+        // Data Import/Export
+        let importFileData = null;
+
+        document.getElementById('exportDataBtn').addEventListener('click', async () => {
+            try {
+                const res = await fetch('api/export/index.php');
+                if (!res.ok) throw new Error('Export failed');
+
+                const data = await res.json();
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `dailylog-backup-${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                showToast('Data exported successfully', 'success');
+            } catch (e) {
+                console.error('Export error:', e);
+                showToast('Failed to export data', 'error');
+            }
+        });
+
+        document.getElementById('importFileInput').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) {
+                importFileData = null;
+                document.getElementById('importFileName').classList.add('hidden');
+                document.getElementById('importDataBtn').disabled = true;
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    importFileData = JSON.parse(event.target.result);
+                    document.getElementById('importFileNameText').textContent = file.name;
+                    document.getElementById('importFileName').classList.remove('hidden');
+                    document.getElementById('importDataBtn').disabled = false;
+                } catch (err) {
+                    showToast('Invalid JSON file', 'error');
+                    importFileData = null;
+                    document.getElementById('importFileName').classList.add('hidden');
+                    document.getElementById('importDataBtn').disabled = true;
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        document.getElementById('importDataBtn').addEventListener('click', async () => {
+            if (!importFileData) {
+                showToast('Please select a file first', 'warning');
+                return;
+            }
+
+            const mode = document.querySelector('input[name="importMode"]:checked').value;
+
+            // Confirm if replace mode
+            if (mode === 'replace') {
+                const confirmed = await showConfirm(
+                    'Replace All Data?',
+                    'This will permanently delete all your existing data and replace it with the imported data. This action cannot be undone. Are you sure?'
+                );
+                if (!confirmed) return;
+            }
+
+            try {
+                const res = await fetch('api/import/index.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        importData: importFileData,
+                        mode: mode
+                    })
+                });
+
+                const result = await res.json();
+
+                if (res.ok) {
+                    showToast(`Import successful! ${result.results.vehicles} vehicles, ${result.results.fuelEntries} fuel entries, ${result.results.maintenanceCosts} maintenance records, ${result.results.expenses} expenses imported.`, 'success');
+
+                    // Reset form
+                    document.getElementById('importFileInput').value = '';
+                    importFileData = null;
+                    document.getElementById('importFileName').classList.add('hidden');
+                    document.getElementById('importDataBtn').disabled = true;
+
+                    // Reload data
+                    await fetchVehicles();
+                    if (currentVehicleId) {
+                        fetchFuelData();
+                        fetchMaintenanceData();
+                        loadBikeAnalytics();
+                    }
+                    fetchExpenses();
+                } else {
+                    showToast(result.error || 'Import failed', 'error');
+                }
+            } catch (e) {
+                console.error('Import error:', e);
+                showToast('Failed to import data', 'error');
+            }
+        });
+
         // Sticky tabs with smooth shadow on scroll
         const tabsContainer = document.getElementById('tabsContainer');
         let lastScrollY = window.scrollY;
@@ -975,7 +1082,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <span>Trip Cost: ${settings.currency || 'BDT'} ${totalCostUsed.toFixed(2)}</span>
                         </div>
                     </div>
-                    <div class="text-center text-[10px] sm:text-xs ${efficiencyClass.split(' ')[0]} border-t ${efficiencyClass.split(' ')[2]} pt-1 mt-1">
+                    <div class="text-center text-xs sm:text-sm font-medium ${efficiencyClass.split(' ')[0]} border-t ${efficiencyClass.split(' ')[2]} pt-1 mt-1">
                         ${efficiencyText}
                     </div>
                 </div>

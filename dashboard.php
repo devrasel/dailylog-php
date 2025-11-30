@@ -323,6 +323,9 @@ if (!isset($_SESSION['user_id'])) {
                         <button class="settings-sub-tab active flex-1 py-1.5 px-3 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-white dark:hover:bg-gray-600 focus:outline-none transition-all shadow-sm" data-subtab="settings-general">
                             <i class="fas fa-cog mr-1"></i> General
                         </button>
+                        <button class="settings-sub-tab flex-1 py-1.5 px-3 rounded-md text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-white/50 dark:hover:bg-gray-600/50 focus:outline-none transition-all" data-subtab="settings-data">
+                            <i class="fas fa-database mr-1"></i> Data
+                        </button>
                         <button class="settings-sub-tab flex-1 py-1.5 px-3 rounded-md text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-white/50 dark:hover:bg-gray-600/50 focus:outline-none transition-all" data-subtab="settings-security">
                             <i class="fas fa-shield-alt mr-1"></i> Security
                         </button>
@@ -360,6 +363,96 @@ if (!isset($_SESSION['user_id'])) {
                                 Save Settings
                             </button>
                         </form>
+                    </div>
+
+                    <!-- Data Management Settings -->
+                    <div id="settings-data" class="settings-sub-content hidden">
+                        <!-- Export Section -->
+                        <div class="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-100 dark:border-gray-700 mb-6">
+                            <div class="flex items-center gap-3 mb-6">
+                                <div class="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-download text-xl text-green-600 dark:text-green-400"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Export Data</h3>
+                                    <p class="text-sm text-gray-500 dark:text-gray-400">Download all your data as a JSON file</p>
+                                </div>
+                            </div>
+                            
+                            <div class="space-y-4">
+                                <p class="text-sm text-gray-600 dark:text-gray-300">
+                                    Export includes all vehicles, fuel entries, maintenance records, expenses, and settings. 
+                                    You can use this backup to restore your data later.
+                                </p>
+                                <button id="exportDataBtn" class="w-full flex items-center justify-center gap-2 py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors">
+                                    <i class="fas fa-download"></i> Export All Data
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Import Section -->
+                        <div class="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-100 dark:border-gray-700">
+                            <div class="flex items-center gap-3 mb-6">
+                                <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-upload text-xl text-blue-600 dark:text-blue-400"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Import Data</h3>
+                                    <p class="text-sm text-gray-500 dark:text-gray-400">Restore data from a backup file</p>
+                                </div>
+                            </div>
+                            
+                            <div class="space-y-4">
+                                <!-- Import Mode Selection -->
+                                <div class="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg">
+                                    <label class="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3">Import Mode</label>
+                                    <div class="space-y-2">
+                                        <label class="flex items-start gap-3 p-3 border-2 border-gray-200 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                                            <input type="radio" name="importMode" value="merge" checked class="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300">
+                                            <div class="flex-1">
+                                                <div class="font-medium text-gray-900 dark:text-white">Merge</div>
+                                                <div class="text-xs text-gray-500 dark:text-gray-400">Add imported data to existing data</div>
+                                            </div>
+                                        </label>
+                                        <label class="flex items-start gap-3 p-3 border-2 border-gray-200 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                                            <input type="radio" name="importMode" value="replace" class="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300">
+                                            <div class="flex-1">
+                                                <div class="font-medium text-gray-900 dark:text-white">Replace</div>
+                                                <div class="text-xs text-red-500 dark:text-red-400">⚠️ Delete all existing data and import</div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- File Upload -->
+                                <div class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center hover:border-blue-500 dark:hover:border-blue-400 transition-colors">
+                                    <input type="file" id="importFileInput" accept=".json" class="hidden">
+                                    <label for="importFileInput" class="cursor-pointer">
+                                        <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 dark:text-gray-500 mb-3"></i>
+                                        <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Click to select a JSON file</p>
+                                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">or drag and drop</p>
+                                    </label>
+                                </div>
+
+                                <div id="importFileName" class="hidden text-sm text-gray-600 dark:text-gray-300 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                                    <i class="fas fa-file-alt mr-2"></i>
+                                    <span id="importFileNameText"></span>
+                                </div>
+
+                                <button id="importDataBtn" class="w-full flex items-center justify-center gap-2 py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                                    <i class="fas fa-upload"></i> Import Data
+                                </button>
+
+                                <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+                                    <div class="flex gap-2">
+                                        <i class="fas fa-exclamation-triangle text-yellow-600 dark:text-yellow-500 mt-0.5"></i>
+                                        <div class="text-xs text-yellow-800 dark:text-yellow-200">
+                                            <strong>Warning:</strong> Replace mode will permanently delete all your existing data. Make sure to export your current data first!
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Security Settings -->
